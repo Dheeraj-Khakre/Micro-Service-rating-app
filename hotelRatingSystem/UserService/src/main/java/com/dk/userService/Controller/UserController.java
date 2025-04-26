@@ -15,6 +15,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
+
 
 
 @RestController
@@ -28,11 +32,23 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
+    @CircuitBreaker(name = "ratingHotelBreaker", fallbackMethod = "getUserFailur")
+    @Retry(name = "ratingHotelService", fallbackMethod = "ratingHotelFallback")
+    @RateLimiter(name = "userRateLimiter", fallbackMethod = "ratingHotelFallback")
     public ResponseEntity<Users> getUserById(@PathVariable Integer id) {
         Users u1 = userService.getUsersById(id);
         return ResponseEntity.ok(u1);
-         
+
     }
+    
+    public ResponseEntity<Users> getUserFailur(@PathVariable Integer id, Exception ex) {
+
+        Users user = new Users(null, "dumy", "dumy@gmail.com",
+                "this si the circuit failure some of the service is down  error = "+ex);
+                return ResponseEntity.ok(user);
+            }
+   
+
     
     @GetMapping
     public ResponseEntity<List<Users>> getAllUsers() {
